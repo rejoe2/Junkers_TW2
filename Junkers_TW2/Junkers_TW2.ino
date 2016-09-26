@@ -41,11 +41,9 @@
 #include <SPI.h>
 #include <MySensors.h>
 
-#define CHILD_ID_TW2 1
+#define CHILD_ID_TW2 20
 
-#define EPROM_LIGHT_STATE 1
-#define EPROM_DIMMER_LEVEL 2
-
+/*
 #define LIGHT_OFF 0
 #define LIGHT_ON 1
 
@@ -53,33 +51,37 @@
 #define NUMBER_OF_RELAYS 1 // Total number of attached relays
 #define RELAY_ON 1  // GPIO value to write to turn on attached relay
 #define RELAY_OFF 0 // GPIO value to write to turn off attached relay
-
+*/
 
 #define SN "Junkers TW2"
 #define SV "0.1"
 
-int LastLightState = LIGHT_OFF;
-int LastDimValue = 100;
-
-MyMessage TW2a_Msg(CHILD_ID_TW2, V_LIGHT);
-MyMessage TW2b_Msg(CHILD_ID_TW2, V_DIMMER);
+MyMessage TW2_Msg(CHILD_ID_TW2, S_CUSTOM);
 
 byte address = 0x00;
-int CST = 10;
+int CS1 = 10; //MCP4131-103 10kOhm
+int CS2 = 7; //MCP4132-502 5kOhm
+u_int MCP_Calib = 0; //adjust to real resistor value of circuitry without MCP's 
 
 void before() {
-  pinMode (CST, OUTPUT);
-  digitalWrite(CST, HIGH);
-  for (int sensor = 1, pin = RELAY_1; sensor <= NUMBER_OF_RELAYS; sensor++, pin++) {
+  pinMode (CS1, OUTPUT);
+  digitalWrite(CS1, HIGH);
+  pinMode (CS2, OUTPUT);
+  digitalWrite(CS2, HIGH);
+  digitalPotWrite(CS1, MCP_Calib + 108);
+  digitalPotWrite(CS2, 64)
+  
+  /*  for (int sensor = 1, pin = RELAY_1; sensor <= NUMBER_OF_RELAYS; sensor++, pin++) {
     // Then set relay pins in output mode
     pinMode(pin, OUTPUT);
     // Set relay to last known state (using eeprom storage)
-    digitalWrite(pin, RELAY_OFF);
+    digitalWrite(pin, RELAY_OFF);*/
   }
 }
 
 void setup()
 {
+  /*
   //Retreive our last light state from the eprom
   int LightState = loadState(EPROM_LIGHT_STATE);
   if (LightState <= 1) {
@@ -90,7 +92,7 @@ void setup()
       LastDimValue = DimValue;
     }
   }
-
+  */
   //Here you actualy switch on/off the light with the last known dim level
   SetCurrentState2Hardware();
 
@@ -100,7 +102,7 @@ void setup()
 void presentation() {
   // Send the Sketch Version Information to the Gateway
   sendSketchInfo(SN, SV);
-  present(CHILD_ID_TW2, S_DIMMER );
+  present(CHILD_ID_TW2, S_CUSTOM);
 }
 
 void loop()
@@ -119,12 +121,12 @@ void loop()
 }
 
 
-int digitalPotWrite(int value)
+int digitalPotWrite(int CSx, int value)
 {
-  digitalWrite(CST, LOW);
+  digitalWrite(CSx, LOW);
   SPI.transfer(address);
   SPI.transfer(value);
-  digitalWrite(CST, HIGH);
+  digitalWrite(CSx, HIGH);
 }
 
 void receive(const MyMessage &message)
